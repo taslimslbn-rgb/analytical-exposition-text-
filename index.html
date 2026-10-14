@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<!--
+  VIRTUAL LAB: ANALYTICAL EXPOSITION  (versi ramah-HP)
+  ====================================================
+  PERUBAHAN UTAMA:
+  - Di layar kecil (HP), aplikasi TIDAK lagi dipaksa "diputar" ke landscape 1600x900
+    (yang membuat teks sangat kecil). Sekarang tampilannya responsif: header ringkas,
+    menu tab bisa digeser, konten satu kolom, dan teks berukuran normal.
+  - Di laptop/tablet besar, tampilan stage 16:9 tetap seperti semula.
+
+  FOTO PROFIL (tab Developer):
+  Letakkan file foto bernama  foto-profil.jpg  di folder yang sama dengan file ini.
+  (Atau ganti isi atribut src pada <img id="devPhoto"> dengan data base64 foto Anda
+  yang lama.) Jika foto tidak ditemukan, otomatis tampil inisial "TS".
+
+  Agar Hasil Kerja LKPD tersimpan ONLINE, atur SCRIPT_URL (cari: const SCRIPT_URL =)
+  dengan URL Web App hasil deploy Google Apps Script. Lihat PANDUAN_DEPLOYMENT.md
+  dan Code.gs.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Virtual Lab">
+<meta name="theme-color" content="#083330">
+<meta name="format-detection" content="telephone=no">
+<title>Virtual Lab — Analytical Exposition</title>
+<style>
+:root{
+  --teal-900:#083330;
+  --teal-800:#0b4f4a;
+  --teal-700:#106b62;
+  --green-600:#3f8f5f;
+  --green-500:#57a973;
+  --blue-600:#1d6fa5;
+  --blue-500:#2f8bc9;
+  --sand-100:#f4ede1;
+  --sand-50:#fbf7ef;
+  --coral-500:#e2694b;
+  --gold-500:#d3a54b;
+  --ink-900:#12201d;
+  --white:#ffffff;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+html,body{
+  width:100%;
+  height:100%;
+  height:100vh;
+  height:100dvh;
+  overflow:hidden;
+  overscroll-behavior:none;
+  background:var(--teal-900);
+  font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+  color:var(--ink-900);
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
+  touch-action:manipulation;
+  position:fixed; top:0; left:0;
+}
+input, textarea{
+  -webkit-user-select:text; user-select:text;
+  -webkit-touch-callout:default;
+}
+button, .navTab, .iconBtn, .bigBtn, .navBtn, .meetingBtn, .qOption, .sentChip, .catDrop{
+  touch-action:manipulation;
+}
+#stageWrap{
+  position:fixed; inset:0;
+  width:100%; height:100%; height:100dvh;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,var(--teal-900),#031b19);
+}
+
+/* ===== SPLASH SCREEN ===== */
+#splashScreen{
+  position:fixed; inset:0; z-index:9999;
+  background:radial-gradient(circle at 30% 20%, #0f5c54, #052e2a 70%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+#splashScreen::before{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    radial-gradient(circle at 15% 85%, rgba(211,165,75,.22) 0, transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(63,143,95,.28) 0, transparent 45%),
+    radial-gradient(circle at 90% 90%, rgba(29,111,165,.2) 0, transparent 35%);
+}
+.splashIllustration{ position:relative; z-index:1; }
+.splashIllustration svg{ width:200px; height:auto; filter:drop-shadow(0 12px 28px rgba(0,0,0,.45)); }
+.splashTitle{ position:relative; z-index:1; color:#fff; font-size:33.8px; font-weight:800; margin-top:18px; text-align:center; padding:0 24px; letter-spacing:.3px; }
+.splashSubtitle{ position:relative; z-index:1; color:var(--sand-100); font-size:17.6px; margin-top:6px; opacity:.85; text-align:center; padding:0 34px; max-width:440px; }
+.splashLoadingWrap{ position:relative; z-index:1; width:280px; max-width:80%; margin-top:34px; }
+.splashLoadingBar{ height:8px; background:rgba(255,255,255,.15); border-radius:4px; overflow:hidden; }
+.splashLoadingFill{ height:100%; width:0%; background:linear-gradient(90deg,var(--gold-500),var(--green-500)); transition:width .15s linear; }
+.splashLoadingPct{ color:#fff; font-size:15.6px; margin-top:8px; text-align:center; opacity:.75; letter-spacing:.5px; }
+.splashStartBtn{
+  position:relative; z-index:1; margin-top:28px; padding:14px 46px; border-radius:32px; border:none;
+  background:var(--gold-500); color:var(--teal-900); font-weight:800; font-size:20.8px;
+  cursor:pointer; opacity:0; pointer-events:none; transition:opacity .4s, transform .15s;
+  box-shadow:0 8px 22px rgba(0,0,0,.35);
+}
+.splashStartBtn.ready{ opacity:1; pointer-events:auto; }
+.splashStartBtn:hover{ transform:translateY(-2px); }
+.splashHint{ position:relative; z-index:1; color:var(--sand-100); font-size:14.3px; margin-top:14px; opacity:.55; text-align:center; padding:0 30px; }
+
+#stage{
+  width:1600px; height:900px;
+  position:relative;
+  background:var(--sand-50);
+  overflow:hidden;
+  box-shadow:0 30px 80px rgba(0,0,0,.55);
+  transform-origin:center center;
+  border-radius:10px;
+}
+
+/* ===== HEADER ===== */
+#header{
+  position:absolute; top:0; left:0; right:0; height:104px;
+  background:linear-gradient(120deg,var(--teal-800),var(--teal-700));
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px; z-index:50;
+  border-bottom:4px solid var(--gold-500);
+}
+#headerLeft{display:flex; align-items:center; gap:16px;}
+#logoBadge{width:68px;height:68px;border-radius:50%;background:var(--gold-500);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--teal-900);font-size:28.6px;flex-shrink:0;}
+#titleBlock h1{color:var(--white); font-size:28.6px; font-weight:800; letter-spacing:.3px;}
+#titleBlock p{color:var(--sand-100); font-size:16.9px; opacity:.85; margin-top:2px;}
+#headerRight{display:flex; align-items:center; gap:10px;}
+.iconBtn{
+  width:48px; height:48px; border-radius:50%;
+  background:rgba(255,255,255,.12); border:1.5px solid rgba(255,255,255,.35);
+  color:var(--white); font-size:23.4px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:.15s; flex-shrink:0;
+}
+.iconBtn:hover{background:rgba(255,255,255,.25); transform:translateY(-1px);}
+.iconBtn.active{background:var(--gold-500); border-color:var(--gold-500); color:var(--teal-900);}
+
+/* ===== NAV TABS ===== */
+#navBar{
+  position:absolute; top:104px; left:0; right:0; height:64px;
+  background:var(--teal-900);
+  display:flex; z-index:49;
+  box-shadow:0 4px 10px rgba(0,0,0,.2);
+}
+.navTab{
+  flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+  color:rgba(255,255,255,.65); font-size:18.9px; font-weight:700;
+  cursor:pointer; border-right:1px solid rgba(255,255,255,.08);
+  transition:.15s; position:relative; letter-spacing:.4px;
+}
+.navTab .navNum{
+  font-size:14.3px; background:rgba(255,255,255,.15); width:24px; height:24px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center;
+}
+.navTab:hover{color:var(--white); background:rgba(255,255,255,.06);}
+.navTab.active{color:var(--white); background:var(--green-600);}
+.navTab.active .navNum{background:var(--white); color:var(--green-600);}
+.navTab.lockedTab{color:var(--gold-500);}
+.navTab.lockedTab .lockIcon{font-size:15.6px;}
+
+/* ===== PANELS ===== */
+#panels{
+  position:absolute; top:168px; left:0; right:0; bottom:0;
+  overflow:hidden;
+}
+.panel{
+  position:absolute; inset:0; padding:26px 40px;
+  display:none; overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+.panel.active{display:block;}
+.panel::-webkit-scrollbar{width:8px;}
+.panel::-webkit-scrollbar-thumb{background:var(--teal-700); border-radius:4px;}
+
+.sectionTitle{
+  font-size:26px; font-weight:800; color:var(--teal-800); margin-bottom:6px;
+  display:flex; align-items:center; gap:8px;
+}
+.sectionSub{font-size:17.6px; color:#5a6b66; margin-bottom:16px;}
+
+/* Meeting toggle */
+.meetingToggle{display:flex; gap:10px; margin-bottom:18px;}
+.meetingBtn{
+  padding:9px 20px; border-radius:24px; border:2px solid var(--teal-700);
+  background:var(--white); color:var(--teal-800); font-weight:700; font-size:17.6px;
+  cursor:pointer; transition:.15s;
+}
+.meetingBtn.active{background:var(--teal-700); color:var(--white);}
+
+.meetingContent{display:none;}
+.meetingContent.active{display:block;}
+
+/* Cards */
+.card{
+  background:var(--white); border-radius:14px; padding:18px 20px;
+  box-shadow:0 4px 14px rgba(8,51,48,.1); margin-bottom:16px;
+  border-left:5px solid var(--green-600);
+}
+.card h3{font-size:20.2px; color:var(--teal-800); margin-bottom:8px;}
+.card p, .card li{font-size:17.6px; line-height:1.55; color:#33423f;}
+.card ul{margin-left:18px;}
+
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
+
+.tpBox{
+  background:var(--sand-100); border:1.5px dashed var(--gold-500); border-radius:12px;
+  padding:14px 18px; margin-bottom:18px;
+}
+.tpBox h3{color:var(--coral-500); font-size:18.9px; margin-bottom:8px;}
+.tpBox ol{margin-left:18px;}
+.tpBox li{font-size:16.9px; line-height:1.6; color:#33423f; margin-bottom:3px;}
+
+.keyExpr{
+  display:inline-block; background:var(--blue-600); color:#fff; padding:3px 10px;
+  border-radius:6px; font-size:16.2px; font-style:italic; margin:2px 4px 2px 0;
+}
+
+.structureFlow{display:flex; gap:10px; align-items:center; margin:14px 0; flex-wrap:wrap;}
+.structureBox{
+  flex:1; min-width:150px; padding:14px; border-radius:10px; text-align:center;
+  color:#fff; font-weight:700; font-size:17.6px;
+}
+.structureBox small{display:block; font-weight:400; font-size:14.3px; margin-top:4px; opacity:.9;}
+.arrow{font-size:28.6px; color:var(--teal-700);}
+
+/* Simulation */
+.simArea{display:flex; gap:20px;}
+.simSentences{flex:1.3; display:flex; flex-direction:column; gap:10px;}
+.simCats{flex:1; display:flex; flex-direction:column; gap:12px;}
+.sentChip{
+  background:var(--white); border:2px solid var(--teal-700); border-radius:10px;
+  padding:11px 14px; font-size:16.9px; cursor:pointer; transition:.15s;
+  box-shadow:0 2px 6px rgba(0,0,0,.06);
+}
+.sentChip:hover{transform:translateX(4px); border-color:var(--gold-500);}
+.sentChip.placed{opacity:.35; pointer-events:none; text-decoration:line-through;}
+.catDrop{
+  border:3px dashed var(--teal-700); border-radius:12px; padding:12px; min-height:70px;
+  background:rgba(255,255,255,.6); cursor:pointer;
+}
+.catDrop h4{font-size:16.9px; color:var(--teal-800); margin-bottom:6px;}
+.catDrop .placedItem{
+  background:var(--green-600); color:#fff; font-size:15.6px; padding:6px 10px; border-radius:6px;
+  margin-bottom:5px;
+}
+.catDrop .placedItem.wrong{background:var(--coral-500);}
+#simScoreBox, #sim2ScoreBox{
+  margin-top:14px; font-size:18.2px; font-weight:700; color:var(--teal-800);
+}
+.simFeedback{font-size:16.2px; margin-top:6px; min-height:18px;}
+
+/* Worksheet */
+#wsIntro{text-align:center; padding:40px 60px;}
+#wsIntro h2{font-size:28.6px; color:var(--teal-800); margin-bottom:12px;}
+#wsIntro p{font-size:18.2px; color:#4a5a56; margin-bottom:20px; line-height:1.6;}
+.bigBtn{
+  background:var(--green-600); color:#fff; border:none; padding:13px 34px;
+  border-radius:30px; font-size:19.5px; font-weight:700; cursor:pointer;
+  box-shadow:0 6px 16px rgba(63,143,95,.35); transition:.15s;
+}
+.bigBtn:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(63,143,95,.45);}
+.bigBtn:disabled{background:#aab5b2; cursor:not-allowed; box-shadow:none;}
+
+#quizWrap{max-width:900px; margin:0 auto; display:none;}
+#quizProgress{font-size:16.2px; color:#5a6b66; margin-bottom:8px; text-align:center;}
+#quizProgressBar{height:7px; background:#dfe7e4; border-radius:4px; overflow:hidden; margin-bottom:20px;}
+#quizProgressFill{height:100%; background:var(--green-600); width:0%; transition:.3s;}
+.qCard{background:var(--white); border-radius:14px; padding:24px 28px; box-shadow:0 6px 18px rgba(8,51,48,.12);}
+.qCard h3{font-size:19.5px; color:var(--teal-800); margin-bottom:16px; line-height:1.5;}
+.qOption{
+  display:block; width:100%; text-align:left; background:var(--sand-50);
+  border:2px solid #dfe7e4; border-radius:10px; padding:11px 16px; margin-bottom:9px;
+  font-size:17.6px; cursor:pointer; transition:.15s; color:#33423f;
+}
+.qOption:hover{border-color:var(--blue-500); background:#eef6fb;}
+.qOption.selected{border-color:var(--teal-700); background:var(--teal-700); color:#fff; font-weight:700;}
+.qNav{display:flex; justify-content:space-between; margin-top:18px;}
+.navBtn{
+  background:var(--teal-700); color:#fff; border:none; padding:10px 22px;
+  border-radius:24px; font-size:17.6px; font-weight:700; cursor:pointer;
+}
+.navBtn:disabled{background:#c3ccc9; cursor:not-allowed;}
+.navBtn.ghost{background:transparent; color:var(--teal-700); border:2px solid var(--teal-700);}
+
+#quizDone{display:none; text-align:center; padding:40px;}
+#quizDone h2{color:var(--teal-800); font-size:31.2px; margin-bottom:10px;}
+#quizScoreCircle{
+  width:144px; height:144px; border-radius:50%; margin:20px auto;
+  background:conic-gradient(var(--green-600) 0deg, #dfe7e4 0deg);
+  display:flex; align-items:center; justify-content:center; font-size:33.8px; font-weight:800;
+  color:var(--teal-800); position:relative;
+}
+#quizScoreCircle span{background:var(--sand-50); width:106px; height:106px; border-radius:50%; display:flex; align-items:center; justify-content:center;}
+
+/* Developer */
+.devHero{
+  position:relative;
+  max-width:860px; margin:10px auto 22px auto;
+  background:linear-gradient(135deg, var(--teal-800), var(--teal-700) 55%, var(--green-600));
+  border-radius:22px;
+  padding:38px 34px;
+  box-shadow:0 16px 36px rgba(8,51,48,.28);
+  overflow:hidden;
+}
+.devHero::before{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    radial-gradient(circle at 90% 10%, rgba(211,165,75,.30) 0, transparent 45%),
+    radial-gradient(circle at 8% 95%, rgba(47,139,201,.28) 0, transparent 40%);
+}
+.devCard{
+  position:relative; z-index:1;
+  display:flex; gap:30px; align-items:center;
+}
+.devAvatarRing{
+  width:158px; height:158px; border-radius:50%; padding:5px;
+  background:conic-gradient(var(--gold-500), var(--green-500), var(--blue-500), var(--gold-500));
+  flex-shrink:0;
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+}
+.devAvatarRing img{width:100%; height:100%; border-radius:50%; object-fit:cover; border:4px solid var(--white); background:#fff; display:block;}
+.devAvatarRing .devAvatarPlaceholder{
+  width:100%; height:100%; border-radius:50%; border:4px solid var(--white);
+  background:var(--sand-100); display:flex; align-items:center; justify-content:center;
+  color:var(--teal-700); font-size:34px; text-align:center; padding:10px; font-weight:800;
+}
+.devInfo{color:var(--white);}
+.devInfo h2{font-size:29.9px; font-weight:800; margin-bottom:3px; letter-spacing:.2px;}
+.devInfo .devRole{
+  display:inline-block; font-size:16.2px; color:var(--teal-900); font-weight:800;
+  background:var(--gold-500); padding:4px 12px; border-radius:20px; margin-bottom:14px;
+}
+.devInfo table{font-size:16.9px; color:var(--sand-100); border-collapse:collapse;}
+.devInfo table td{padding:5px 10px 5px 0; vertical-align:top;}
+.devInfo table td.k{font-weight:700; color:var(--gold-500); white-space:nowrap; width:110px;}
+.devInfo table td.v{color:#fff; word-break:break-word;}
+
+/* Password gate */
+.gateWrap{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100%; text-align:center; gap:14px; padding-top:40px;
+}
+.gateWrap .gateIcon{font-size:57.2px;}
+.gateWrap input{
+  padding:11px 16px; border-radius:10px; border:2px solid var(--teal-700);
+  font-size:19.5px; text-align:center; letter-spacing:2px; width:220px; max-width:100%;
+}
+.gateWrap button{
+  background:var(--teal-700); color:#fff; border:none; padding:11px 28px;
+  border-radius:24px; font-weight:700; cursor:pointer; font-size:18.2px;
+}
+.gateMsg{font-size:16.2px; color:var(--coral-500); min-height:16px;}
+
+.tableWrap{width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;}
+#resultsTable{width:100%; border-collapse:collapse; font-size:16.2px; margin-top:10px;}
+#resultsTable th, #resultsTable td{border:1px solid #dfe7e4; padding:8px 10px; text-align:left;}
+#resultsTable th{background:var(--teal-700); color:#fff; white-space:nowrap;}
+#resultsTable tr:nth-child(even){background:#f5f9f8;}
+.resultsBar{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px; flex-wrap:wrap;}
+.smallBtn{
+  background:var(--coral-500); color:#fff; border:none; padding:8px 16px;
+  border-radius:20px; font-size:16.2px; font-weight:700; cursor:pointer;
+}
+
+/* Reset confirm modal */
+#confirmOverlay{
+  position:absolute; inset:0; background:rgba(8,20,18,.55); z-index:200;
+  display:none; align-items:center; justify-content:center;
+}
+#confirmBox{
+  background:#fff; border-radius:14px; padding:28px 32px; text-align:center; width:380px; max-width:90%;
+  box-shadow:0 20px 50px rgba(0,0,0,.4);
+}
+#confirmBox h3{color:var(--teal-800); margin-bottom:10px; font-size:22.1px;}
+#confirmBox p{font-size:17.6px; color:#4a5a56; margin-bottom:18px;}
+#confirmBox .row{display:flex; gap:12px; justify-content:center;}
+#confirmBox button{padding:9px 22px; border-radius:22px; border:none; font-weight:700; cursor:pointer; font-size:16.9px;}
+#confirmYes{background:var(--coral-500); color:#fff;}
+#confirmNo{background:#e3e9e7; color:#33423f;}
+
+.stepList{counter-reset:step;}
+.stepItem{
+  display:flex; gap:14px; align-items:flex-start; margin-bottom:14px;
+  background:#fff; border-radius:12px; padding:14px 18px; box-shadow:0 3px 10px rgba(8,51,48,.08);
+}
+.stepNum{
+  counter-increment:step; background:var(--green-600); color:#fff; min-width:32px; height:32px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800;
+}
+.stepNum::before{content:counter(step);}
+.stepItem h4{color:var(--teal-800); font-size:18.2px; margin-bottom:3px;}
+.stepItem p{font-size:16.9px; color:#4a5a56;}
+
+#issueBadges{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+.issueBadge{
+  background:var(--sand-100); border:1px solid var(--gold-500); border-radius:20px;
+  padding:6px 14px; font-size:15.6px; font-weight:700; color:var(--teal-800);
+}
+
+/* =====================================================================
+   MODE HP / LAYAR KECIL
+   Berlaku untuk lebar <= 900px ATAU tinggi <= 500px (HP landscape).
+   Layout menjadi fluid (tanpa skala 1600x900), teks berukuran normal.
+   ===================================================================== */
+@media (max-width:900px), (max-height:500px){
+  #stageWrap{display:block;}
+  #stage{
+    width:100%; height:100%;
+    transform:none !important;
+    border-radius:0; box-shadow:none;
+    display:flex; flex-direction:column;
+  }
+
+  /* Splash */
+  .splashIllustration svg{width:120px;}
+  .splashTitle{font-size:22px; margin-top:10px; padding:0 18px;}
+  .splashSubtitle{font-size:13.5px; padding:0 22px;}
+  .splashLoadingWrap{margin-top:20px;}
+  .splashStartBtn{margin-top:18px; padding:12px 40px; font-size:18px;}
+  .splashHint{font-size:12px;}
+
+  /* Header ringkas */
+  #header{
+    position:relative; flex:0 0 auto; height:auto; min-height:52px;
+    padding:6px 10px; padding-top:calc(6px + env(safe-area-inset-top));
+    border-bottom-width:3px;
+  }
+  #headerLeft{gap:10px; min-width:0;}
+  #logoBadge{width:36px; height:36px; font-size:15px;}
+  #titleBlock{min-width:0;}
+  #titleBlock h1{font-size:15px; line-height:1.2; letter-spacing:0;}
+  #titleBlock p{display:none;}
+  #headerRight{gap:6px;}
+  .iconBtn{width:38px; height:38px; font-size:18px;}
+
+  /* Tab navigasi bisa digeser */
+  #navBar{
+    position:relative; top:auto; flex:0 0 auto; height:46px;
+    overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  #navBar::-webkit-scrollbar{display:none;}
+  .navTab{flex:0 0 auto; padding:0 14px; font-size:14px; white-space:nowrap; gap:6px; letter-spacing:0;}
+  .navTab .navNum{width:20px; height:20px; font-size:12px;}
+
+  /* Panel */
+  #panels{position:relative; top:auto; bottom:auto; flex:1 1 auto; min-height:0;}
+  .panel{padding:14px 14px calc(20px + env(safe-area-inset-bottom));}
+
+  .sectionTitle{font-size:20px;}
+  .sectionSub{font-size:14.5px; margin-bottom:12px;}
+  .meetingToggle{margin-bottom:12px;}
+  .meetingBtn{padding:8px 16px; font-size:15px;}
+
+  .card{padding:14px 14px; border-radius:12px;}
+  .card h3{font-size:17px;}
+  .card p, .card li{font-size:15px; line-height:1.55;}
+  .tpBox{padding:12px 14px;}
+  .tpBox h3{font-size:16px;}
+  .tpBox li{font-size:14.5px;}
+  .keyExpr{font-size:14px;}
+
+  .grid2, .grid3{grid-template-columns:1fr;}
+
+  .structureFlow{flex-direction:column; align-items:stretch; gap:6px;}
+  .structureBox{min-width:0; font-size:15px; padding:10px;}
+  .arrow{transform:rotate(90deg); text-align:center; font-size:22px; line-height:1;}
+
+  .stepItem{padding:12px; gap:10px;}
+  .stepItem h4{font-size:15.5px;}
+  .stepItem p{font-size:14.5px;}
+  .issueBadge{font-size:13px; padding:5px 10px;}
+
+  /* Simulasi: satu kolom */
+  .simArea{flex-direction:column; gap:14px;}
+  .sentChip{font-size:14.5px; padding:10px 12px;}
+  .sentChip:hover{transform:none;}
+  .catDrop{padding:10px; min-height:56px;}
+  .catDrop h4{font-size:14.5px;}
+  .catDrop .placedItem{font-size:13.5px;}
+  #simScoreBox, #sim2ScoreBox{font-size:16px;}
+  .simFeedback{font-size:14px;}
+
+  /* Worksheet */
+  #wsIntro{padding:8px 0;}
+  #wsIntro h2{font-size:21px;}
+  #wsIntro p{font-size:14.5px !important;}
+  .bigBtn{font-size:16.5px; padding:12px 26px;}
+  .qCard{padding:16px 14px;}
+  .qCard h3{font-size:16px;}
+  .qOption{font-size:14.5px; padding:10px 12px;}
+  #quizProgress{font-size:13.5px;}
+  .navBtn{font-size:15px; padding:10px 18px;}
+  #quizDone{padding:20px 6px;}
+  #quizDone h2{font-size:24px;}
+  #quizScoreCircle{width:120px; height:120px; font-size:28px;}
+  #quizScoreCircle span{width:88px; height:88px;}
+
+  /* Developer */
+  .devHero{padding:22px 16px; border-radius:18px;}
+  .devCard{flex-direction:column; text-align:center; gap:16px;}
+  .devAvatarRing{width:124px; height:124px;}
+  .devInfo h2{font-size:21px;}
+  .devInfo .devRole{font-size:13px;}
+  .devInfo table{font-size:14.5px; margin:0 auto; text-align:left;}
+  .devInfo table td.k{width:auto;}
+
+  /* Gate password */
+  .gateWrap{height:auto; padding-top:20px;}
+  .gateWrap .gateIcon{font-size:44px;}
+  .gateWrap input{font-size:18px;}
+
+  /* Hasil */
+  #resultsTable{font-size:13.5px;}
+  #resultsTable th, #resultsTable td{padding:6px 7px;}
+  .smallBtn{font-size:13.5px; padding:7px 12px;}
+}
+
+/* Input min 16px agar iOS tidak auto-zoom */
+input[type="text"], input[type="password"]{font-size:20.8px;}
+@media (max-width:900px), (max-height:500px){
+  input[type="text"], input[type="password"]{font-size:16px;}
+}
+</style>
+</head>
+<body>
+
+<div id="splashScreen">
+  <div class="splashIllustration">
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gGlobe" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#2f8bc9"/>
+          <stop offset="1" stop-color="#3f8f5f"/>
+        </linearGradient>
+        <linearGradient id="gBook" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#d3a54b"/>
+          <stop offset="1" stop-color="#e2694b"/>
+        </linearGradient>
+      </defs>
+      <circle cx="100" cy="68" r="44" fill="url(#gGlobe)"/>
+      <path d="M56 68 Q100 48 144 68" stroke="#fff" stroke-width="2" fill="none" opacity=".55"/>
+      <path d="M56 84 Q100 104 144 84" stroke="#fff" stroke-width="2" fill="none" opacity=".55"/>
+      <ellipse cx="100" cy="68" rx="20" ry="44" fill="none" stroke="#fff" stroke-width="2" opacity=".55"/>
+      <path d="M30 150 L100 130 L170 150 L170 172 L100 156 L30 172 Z" fill="url(#gBook)"/>
+      <line x1="100" y1="130" x2="100" y2="156" stroke="#08332f" stroke-width="2"/>
+    </svg>
+  </div>
+  <div class="splashTitle">Virtual Lab: Analytical Exposition</div>
+  <div class="splashSubtitle">Social &amp; Environmental Issues — Multimodal Listening/Viewing | Kelas XI Fase F</div>
+  <div class="splashLoadingWrap">
+    <div class="splashLoadingBar"><div class="splashLoadingFill" id="splashFill"></div></div>
+    <div class="splashLoadingPct" id="splashPct">Loading... 0%</div>
+  </div>
+  <button class="splashStartBtn" id="splashStartBtn">Mulai</button>
+  <div class="splashHint">Dapat dibuka di HP, tablet, maupun laptop</div>
+</div>
+
+<div id="stageWrap">
+<div id="stage">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div id="headerLeft">
+      <div id="logoBadge">VL</div>
+      <div id="titleBlock">
+        <h1>Virtual Lab: Analytical Exposition</h1>
+        <p>Social &amp; Environmental Issues — Multimodal Listening/Viewing | Kelas XI Fase F</p>
+      </div>
+    </div>
+    <div id="headerRight">
+      <button class="iconBtn" id="soundBtn" title="Toggle Sound">🔊</button>
+      <button class="iconBtn" id="resetBtn" title="Reset">↺</button>
+      <button class="iconBtn" id="fsBtn" title="Fullscreen">⛶</button>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div id="navBar">
+    <div class="navTab active" data-panel="procedure"><span class="navNum">1</span> Procedure</div>
+    <div class="navTab" data-panel="theory"><span class="navNum">2</span> Theory</div>
+    <div class="navTab" data-panel="simulation"><span class="navNum">3</span> Simulation</div>
+    <div class="navTab" data-panel="worksheet"><span class="navNum">4</span> Worksheet</div>
+    <div class="navTab lockedTab" data-panel="simkey"><span class="lockIcon">🔒</span> Sim. Key</div>
+    <div class="navTab lockedTab" data-panel="wskey"><span class="lockIcon">🔒</span> Answer Key</div>
+    <div class="navTab" data-panel="developer"><span class="navNum">5</span> Developer</div>
+    <div class="navTab lockedTab" data-panel="results"><span class="lockIcon">🔒</span> Results</div>
+  </div>
+
+  <!-- PANELS -->
+  <div id="panels">
+
+    <!-- 1. PROCEDURE -->
+    <div class="panel active" id="panel-procedure">
+      <div class="sectionTitle">📋 How to Use This Virtual Lab</div>
+      <div class="sectionSub">Ikuti langkah-langkah berikut untuk menggunakan Lab Maya ini secara maksimal.</div>
+      <div class="stepList">
+        <div class="stepItem"><div class="stepNum"></div><div><h4>Read the Theory</h4><p>Open the <b>Theory</b> tab and study the concept of Analytical Exposition, its generic structure, and key expressions for each meeting.</p></div></div>
+        <div class="stepItem"><div class="stepNum"></div><div><h4>Try the Simulation</h4><p>Go to the <b>Simulation</b> tab and classify example sentences into the correct category to check your understanding.</p></div></div>
+        <div class="stepItem"><div class="stepNum"></div><div><h4>Complete the Worksheet</h4><p>Open the <b>Worksheet</b> tab, choose the correct meeting, and answer all multiple-choice questions one screen at a time.</p></div></div>
+        <div class="stepItem"><div class="stepNum"></div><div><h4>Check Developer Info</h4><p>Visit the <b>Developer</b> tab to see who created this lab.</p></div></div>
+        <div class="stepItem"><div class="stepNum"></div><div><h4>Teacher Access</h4><p>The <b>Results</b> tab is locked. Only the teacher can open it using the password to review students' worksheet scores.</p></div></div>
+      </div>
+
+      <div class="tpBox">
+        <h3>🎯 Tujuan Pembelajaran</h3>
+        <ol>
+          <li>Peserta didik mampu menjelaskan konsep dan tujuan komunikatif teks analytical exposition melalui teks multimodal tentang isu sosial dan lingkungan.</li>
+          <li>Peserta didik mampu mengidentifikasi generic structure (thesis, arguments, reiteration/conclusion) dari teks analytical exposition multimodal.</li>
+          <li>Peserta didik mampu menentukan thesis statement/posisi penulis berdasarkan key expressions dalam teks yang diperdengarkan/ditayangkan.</li>
+          <li>Peserta didik mampu menganalisis argumen (evidence &amp; reasoning) yang mendukung thesis pada teks multimodal mengenai Marine Plastic Pollution, Deforestation, Social Media Addiction, dan E-waste Management.</li>
+          <li>Peserta didik mampu menyusun thesis statement dan kerangka argumen tertulis tentang salah satu isu sosial/lingkungan menggunakan ungkapan persuasif yang tepat.</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h3>🌍 Topic Overview</h3>
+        <p><b>Meeting 1:</b> Understanding the Concept, Generic Structure, and Thesis Statement — focus issues: <i>Marine Plastic Pollution &amp; Deforestation</i>.</p>
+        <p style="margin-top:6px;"><b>Meeting 2:</b> Analyzing Arguments and Constructing a Thesis Statement — focus issues: <i>Social Media Addiction &amp; E-waste Management</i>.</p>
+        <div id="issueBadges">
+          <span class="issueBadge">🌊 Marine Plastic Pollution</span>
+          <span class="issueBadge">🌳 Deforestation</span>
+          <span class="issueBadge">📱 Social Media Addiction</span>
+          <span class="issueBadge">🔌 E-waste Management</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. THEORY -->
+    <div class="panel" id="panel-theory">
+      <div class="sectionTitle">📖 Theory</div>
+      <div class="meetingToggle">
+        <button class="meetingBtn active" data-meeting="1" data-group="theory">Meeting 1</button>
+        <button class="meetingBtn" data-meeting="2" data-group="theory">Meeting 2</button>
+      </div>
+
+      <!-- Meeting 1 Theory -->
+      <div class="meetingContent active" id="theory-m1">
+        <div class="card">
+          <h3>What is an Analytical Exposition Text?</h3>
+          <p>An analytical exposition text is used <b>to persuade</b> listeners/readers that an issue is important and needs attention, by presenting a position supported by logical arguments. In this lab, the issues discussed are <b>Marine Plastic Pollution</b> and <b>Deforestation</b>.</p>
+        </div>
+        <div class="card">
+          <h3>Generic Structure</h3>
+          <div class="structureFlow">
+            <div class="structureBox" style="background:var(--blue-600);">THESIS<small>Position / main idea</small></div>
+            <div class="arrow">→</div>
+            <div class="structureBox" style="background:var(--green-600);">ARGUMENTS<small>Evidence &amp; reasoning</small></div>
+            <div class="arrow">→</div>
+            <div class="structureBox" style="background:var(--coral-500);">REITERATION<small>Restated conclusion</small></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Key Expressions for Thesis Statement</h3>
+          <p>These expressions usually signal that a sentence is a thesis statement:</p>
+          <div style="margin-top:8px;">
+            <span class="keyExpr">In my opinion...</span>
+            <span class="keyExpr">I strongly believe that...</span>
+            <span class="keyExpr">It is critical that...</span>
+            <span class="keyExpr">Therefore, we must...</span>
+          </div>
+          <p style="margin-top:10px;"><i>Example:</i> "I strongly believe that marine plastic pollution must be stopped immediately." — this is a <b>thesis statement</b>, not an argument or reiteration.</p>
+        </div>
+        <div class="card" style="border-left-color:var(--gold-500);">
+          <h3>📖 Example Text: Marine Plastic Pollution &amp; Deforestation</h3>
+          <p style="font-size:15.6px; color:#5a6b66; margin-bottom:10px;"><i>Read this multimodal script carefully — the highlighted sentences also appear in the Simulation and Worksheet activities for Meeting 1.</i></p>
+          <p><b style="color:var(--blue-600);">[Thesis]</b> "I strongly believe that marine plastic pollution must be stopped immediately."</p>
+          <p><b style="color:var(--green-600);">[Argument]</b> Every year, millions of tons of plastic waste enter the ocean and kill marine animals. Sea turtles mistake floating plastic bags for jellyfish, and seabirds accidentally feed plastic fragments to their chicks. Scientists warn that by 2050, the ocean could contain more plastic than fish by weight.</p>
+          <p><b style="color:var(--coral-500);">[Reiteration]</b> "Therefore, everyone must take action now to reduce plastic waste before it is too late."</p>
+          <hr style="margin:14px 0; border:none; border-top:1px solid #dfe7e4;">
+          <p><b style="color:var(--blue-600);">[Thesis]</b> "It is critical that we protect our forests from illegal logging."</p>
+          <p><b style="color:var(--green-600);">[Argument]</b> Deforestation destroys the natural habitat of countless species and speeds up climate change. Every minute, forests the size of many football fields disappear, releasing carbon dioxide that was once safely stored in the trees.</p>
+          <p><b style="color:var(--coral-500);">[Reiteration]</b> "In conclusion, protecting our forests is not optional — it is our shared responsibility."</p>
+          <p style="margin-top:10px; font-size:15.6px; color:var(--teal-800);">💡 In the <b>Simulation</b> tab, you will sort the highlighted sentences above into Thesis / Argument / Reiteration. In the <b>Worksheet</b>, several questions are based directly on this text.</p>
+        </div>
+      </div>
+
+      <!-- Meeting 2 Theory -->
+      <div class="meetingContent" id="theory-m2">
+        <div class="gateWrap" id="theoryM2Gate" style="padding-top:30px;">
+          <div class="gateIcon">🔒</div>
+          <h3 style="color:var(--teal-800);">Meeting 2 is Locked</h3>
+          <p style="font-size:16.9px; color:#5a6b66;">Ask your teacher for the 4-digit password to unlock Meeting 2 Theory.</p>
+          <input type="password" id="theoryM2Pass" maxlength="4" placeholder="****" inputmode="numeric">
+          <button id="theoryM2UnlockBtn">Unlock</button>
+          <div class="gateMsg" id="theoryM2GateMsg"></div>
+        </div>
+        <div id="theoryM2Content" style="display:none;">
+          <div class="card">
+            <h3>Analyzing Arguments: Evidence &amp; Reasoning</h3>
+            <p>An <b>argument</b> in an analytical exposition text is built from two parts: <b>evidence</b> (factual data, statistics, or examples) and <b>reasoning</b> (the explanation of why that evidence supports the thesis). In this meeting, the issues discussed are <b>Social Media Addiction</b> and <b>E-waste Management</b>.</p>
+          </div>
+          <div class="card">
+            <h3>Evidence vs. Reasoning — Example</h3>
+            <p><b>Evidence:</b> "Millions of tons of e-waste are dumped every year."</p>
+            <p><b>Reasoning:</b> "...this shows current disposal methods are unsustainable, so manufacturers must take responsibility."</p>
+          </div>
+          <div class="card">
+            <h3>Constructing Your Own Thesis Statement</h3>
+            <p>Choose one issue (Marine Plastic Pollution, Deforestation, Social Media Addiction, or E-waste Management), then write:</p>
+            <ul>
+              <li>A <b>thesis statement</b> using one key expression.</li>
+              <li>Two <b>supporting arguments</b> (evidence + reasoning).</li>
+              <li>A short <b>reiteration/conclusion</b> that restates your position.</li>
+            </ul>
+          </div>
+          <div class="card" style="border-left-color:var(--gold-500);">
+            <h3>📖 Example Text: Social Media Addiction &amp; E-waste Management</h3>
+            <p style="font-size:15.6px; color:#5a6b66; margin-bottom:10px;"><i>Read this multimodal script carefully — the highlighted sentences also appear in the Simulation and Worksheet activities for Meeting 2.</i></p>
+            <p><b style="color:var(--blue-600);">[Thesis]</b> "I strongly believe that social media addiction must be addressed by schools and parents."</p>
+            <p><b style="color:var(--green-600);">[Evidence]</b> "Studies show that excessive social media use is linked to higher anxiety levels among teenagers."</p>
+            <p><b style="color:var(--gold-500);">[Reasoning]</b> "This happens because constant comparison with others online lowers self-esteem." Teenagers spend hours scrolling through carefully curated images of other people's lives, which can create unrealistic expectations and feelings of inadequacy.</p>
+            <hr style="margin:14px 0; border:none; border-top:1px solid #dfe7e4;">
+            <p><b style="color:var(--blue-600);">[Thesis]</b> "It is critical that we manage e-waste responsibly."</p>
+            <p><b style="color:var(--green-600);">[Evidence]</b> "Millions of tons of e-waste are dumped every year."</p>
+            <p><b style="color:var(--gold-500);">[Reasoning]</b> "This shows that current disposal methods are unsustainable." Toxic materials such as lead and mercury leak into the soil and water, harming both human health and the environment.</p>
+            <p style="margin-top:10px; font-size:15.6px; color:var(--teal-800);">💡 In the <b>Simulation</b> tab, you will classify the highlighted sentences above as Thesis / Evidence / Reasoning. In the <b>Worksheet</b>, several questions are based directly on this text.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. SIMULATION -->
+    <div class="panel" id="panel-simulation">
+      <div class="sectionTitle">🧪 Simulation</div>
+      <div class="meetingToggle">
+        <button class="meetingBtn active" data-meeting="1" data-group="sim">Meeting 1</button>
+        <button class="meetingBtn" data-meeting="2" data-group="sim">Meeting 2</button>
+      </div>
+
+      <!-- Sim Meeting 1 -->
+      <div class="meetingContent active" id="sim-m1">
+        <p class="sectionSub">🎯 <b>Structure Sorter</b> — Tap each sentence, then tap the category box it belongs to (Thesis / Argument / Reiteration). These sentences are taken from the example text in the <b>Theory</b> tab.</p>
+        <div class="simArea">
+          <div class="simSentences" id="sim1-sentences"></div>
+          <div class="simCats">
+            <div class="catDrop" data-cat="thesis"><h4>THESIS</h4><div class="dropList"></div></div>
+            <div class="catDrop" data-cat="argument"><h4>ARGUMENT</h4><div class="dropList"></div></div>
+            <div class="catDrop" data-cat="reiteration"><h4>REITERATION</h4><div class="dropList"></div></div>
+          </div>
+        </div>
+        <div class="simFeedback" id="sim1-feedback"></div>
+        <div id="simScoreBox">Score: <span id="sim1-score">0</span> / <span id="sim1-total">0</span></div>
+      </div>
+
+      <!-- Sim Meeting 2 -->
+      <div class="meetingContent" id="sim-m2">
+        <div class="gateWrap" id="simM2Gate" style="padding-top:30px;">
+          <div class="gateIcon">🔒</div>
+          <h3 style="color:var(--teal-800);">Meeting 2 is Locked</h3>
+          <p style="font-size:16.9px; color:#5a6b66;">Ask your teacher for the 4-digit password to unlock Meeting 2 Simulation.</p>
+          <input type="password" id="simM2Pass" maxlength="4" placeholder="****" inputmode="numeric">
+          <button id="simM2UnlockBtn">Unlock</button>
+          <div class="gateMsg" id="simM2GateMsg"></div>
+        </div>
+        <div id="simM2Content" style="display:none;">
+          <p class="sectionSub">🎯 <b>Evidence &amp; Reasoning Classifier</b> — Tap each statement, then tap whether it is Thesis, Evidence, or Reasoning. These statements are taken from the example text in the <b>Theory</b> tab.</p>
+          <div class="simArea">
+            <div class="simSentences" id="sim2-sentences"></div>
+            <div class="simCats">
+              <div class="catDrop" data-cat="thesis"><h4>THESIS</h4><div class="dropList"></div></div>
+              <div class="catDrop" data-cat="evidence"><h4>EVIDENCE</h4><div class="dropList"></div></div>
+              <div class="catDrop" data-cat="reasoning"><h4>REASONING</h4><div class="dropList"></div></div>
+            </div>
+          </div>
+          <div class="simFeedback" id="sim2-feedback"></div>
+          <div id="sim2ScoreBox">Score: <span id="sim2-score">0</span> / <span id="sim2-total">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. WORKSHEET -->
+    <div class="panel" id="panel-worksheet">
+      <div class="sectionTitle">📝 Worksheet</div>
+
+      <div id="wsIntro">
+        <h2 style="text-align:center;">Analytical Exposition Worksheet</h2>
+        <p style="text-align:center; color:#4a5a56; font-size:17.6px; margin-bottom:20px;">Fill in your identity, then start the quiz for the meeting. Each meeting has 10 multiple-choice questions based on the example text and material in the <b>Theory</b> tab.</p>
+        <div class="grid2" style="max-width:820px; margin:0 auto;">
+          <div class="card" style="border-left-color:var(--green-600);">
+            <h3 style="text-align:center; margin-bottom:12px;">Meeting 1</h3>
+            <label style="font-size:16.2px; font-weight:700; color:var(--teal-800);">Student Name</label>
+            <input type="text" id="ws1Name" placeholder="Enter your full name" style="width:100%; padding:10px 12px; border-radius:8px; border:2px solid #dfe7e4; margin:6px 0 12px 0;">
+            <label style="font-size:16.2px; font-weight:700; color:var(--teal-800);">Class</label>
+            <input type="text" id="ws1Class" placeholder="e.g. XI - 1" style="width:100%; padding:10px 12px; border-radius:8px; border:2px solid #dfe7e4; margin:6px 0 16px 0;">
+            <div style="text-align:center;">
+              <button class="bigBtn" id="startWs1">Start Meeting 1 Quiz</button>
+            </div>
+          </div>
+          <div class="card" style="border-left-color:var(--blue-600);">
+            <h3 style="text-align:center; margin-bottom:12px;">Meeting 2</h3>
+            <div class="gateWrap" id="wsM2Gate" style="padding-top:6px;">
+              <div class="gateIcon" style="font-size:41.6px;">🔒</div>
+              <p style="font-size:16.2px; color:#5a6b66; margin:0 0 4px 0;">Ask your teacher for the 4-digit password to unlock Meeting 2 Worksheet.</p>
+              <input type="password" id="wsM2Pass" maxlength="4" placeholder="****" inputmode="numeric">
+              <button id="wsM2UnlockBtn">Unlock</button>
+              <div class="gateMsg" id="wsM2GateMsg"></div>
+            </div>
+            <div id="wsM2Content" style="display:none;">
+              <label style="font-size:16.2px; font-weight:700; color:var(--teal-800);">Student Name</label>
+              <input type="text" id="ws2Name" placeholder="Enter your full name" style="width:100%; padding:10px 12px; border-radius:8px; border:2px solid #dfe7e4; margin:6px 0 12px 0;">
+              <label style="font-size:16.2px; font-weight:700; color:var(--teal-800);">Class</label>
+              <input type="text" id="ws2Class" placeholder="e.g. XI - 1" style="width:100%; padding:10px 12px; border-radius:8px; border:2px solid #dfe7e4; margin:6px 0 16px 0;">
+              <div style="text-align:center;">
+                <button class="bigBtn" id="startWs2" style="background:var(--blue-600); box-shadow:0 6px 16px rgba(29,111,165,.35);">Start Meeting 2 Quiz</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p id="wsIdentityMsg" style="text-align:center; color:var(--coral-500); font-size:16.2px; min-height:16px; margin-top:12px;"></p>
+      </div>
+
+      <div id="quizWrap">
+        <div id="quizProgress">Question 1 of 5</div>
+        <div id="quizProgressBar"><div id="quizProgressFill"></div></div>
+        <div class="qCard">
+          <h3 id="qText"></h3>
+          <div id="qOptions"></div>
+          <div class="qNav">
+            <button class="navBtn ghost" id="qBackBtn">Back</button>
+            <button class="navBtn" id="qNextBtn">Next</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="quizDone">
+        <h2>Worksheet Complete!</h2>
+        <div id="quizScoreCircle"><span id="quizScoreText">0/5</span></div>
+        <p id="quizDoneMsg" style="color:#4a5a56; font-size:17.6px;">Great job! Your answers have been saved.</p>
+        <button class="bigBtn" id="backToWsIntro" style="margin-top:14px;">Back to Worksheet Menu</button>
+      </div>
+    </div>
+
+    <!-- SIMULATION ANSWER KEY (locked) -->
+    <div class="panel" id="panel-simkey">
+      <div class="gateWrap" id="simkeyGate">
+        <div class="gateIcon">🔒</div>
+        <h3 style="color:var(--teal-800);">Teacher Access Only</h3>
+        <p style="font-size:16.9px; color:#5a6b66;">Enter the teacher password to view the simulation answer key.</p>
+        <input type="password" id="simkeyPass" placeholder="Password">
+        <button id="simkeyUnlockBtn">Unlock</button>
+        <div class="gateMsg" id="simkeyGateMsg"></div>
+      </div>
+      <div id="simkeyContent" style="display:none;">
+        <div class="sectionTitle">🔑 Simulation Answer Key</div>
+        <div class="meetingToggle">
+          <button class="meetingBtn active" data-meeting="1" data-group="simkey">Meeting 1</button>
+          <button class="meetingBtn" data-meeting="2" data-group="simkey">Meeting 2</button>
+        </div>
+        <div class="meetingContent active" id="simkey-m1">
+          <p class="sectionSub">Structure Sorter — correct categories</p>
+          <div id="simkey1-list"></div>
+        </div>
+        <div class="meetingContent" id="simkey-m2">
+          <p class="sectionSub">Evidence &amp; Reasoning Classifier — correct categories</p>
+          <div id="simkey2-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKSHEET ANSWER KEY (locked) -->
+    <div class="panel" id="panel-wskey">
+      <div class="gateWrap" id="wskeyGate">
+        <div class="gateIcon">🔒</div>
+        <h3 style="color:var(--teal-800);">Teacher Access Only</h3>
+        <p style="font-size:16.9px; color:#5a6b66;">Enter the teacher password to view the worksheet answer key.</p>
+        <input type="password" id="wskeyPass" placeholder="Password">
+        <button id="wskeyUnlockBtn">Unlock</button>
+        <div class="gateMsg" id="wskeyGateMsg"></div>
+      </div>
+      <div id="wskeyContent" style="display:none;">
+        <div class="sectionTitle">🔑 Worksheet Answer Key</div>
+        <div class="meetingToggle">
+          <button class="meetingBtn active" data-meeting="1" data-group="wskey">Meeting 1</button>
+          <button class="meetingBtn" data-meeting="2" data-group="wskey">Meeting 2</button>
+        </div>
+        <div class="meetingContent active" id="wskey-m1"></div>
+        <div class="meetingContent" id="wskey-m2"></div>
+      </div>
+    </div>
+
+    <!-- 5. DEVELOPER -->
+    <div class="panel" id="panel-developer">
+      <div class="sectionTitle">👨‍💻 Developer</div>
+      <div class="devHero">
+        <div class="devCard">
+          <div class="devAvatarRing">
+            <!-- Letakkan foto di folder yang sama dengan nama foto-profil.jpg, atau ganti src dengan data base64 lama -->
+            <img id="devPhoto" src="foto-profil.jpg" alt="Foto Profil Taslim Siolimbona, S.Pd."
+                 onerror="this.parentNode.innerHTML='<div class=&quot;devAvatarPlaceholder&quot;>TS</div>'">
+          </div>
+          <div class="devInfo">
+            <h2>Taslim Siolimbona, S.Pd.</h2>
+            <div class="devRole">✦ English Teacher — Bahasa Inggris Tingkat Lanjut</div>
+            <table>
+              <tr><td class="k">🏫 School</td><td class="v">: SMA Negeri 4 Ternate</td></tr>
+              <tr><td class="k">📚 Class / Phase</td><td class="v">: XI / Fase F</td></tr>
+              <tr><td class="k">🪪 NIP</td><td class="v">: 198406262019031003</td></tr>
+              <tr><td class="k">📱 Phone</td><td class="v">: 085145453435</td></tr>
+              <tr><td class="k">📄 Reference</td><td class="v">: BSKAP No. 046/H/KR/2025</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="max-width:820px; margin:16px auto;">
+        <h3>About This Virtual Lab</h3>
+        <p>This lab was built to support students in learning <b>Analytical Exposition on Social and Environmental Issues</b> through multimodal listening/viewing activities, in line with Rencana Pembelajaran Mendalam (RPM) for Kelas XI Fase F.</p>
+      </div>
+    </div>
+
+    <!-- RESULTS (locked) -->
+    <div class="panel" id="panel-results">
+      <div class="gateWrap" id="resultsGate">
+        <div class="gateIcon">🔒</div>
+        <h3 style="color:var(--teal-800);">Teacher Access Only</h3>
+        <p style="font-size:16.9px; color:#5a6b66;">Enter the teacher password to view students' worksheet results.</p>
+        <input type="password" id="resultsPass" placeholder="Password">
+        <button id="resultsUnlockBtn">Unlock</button>
+        <div class="gateMsg" id="resultsGateMsg"></div>
+      </div>
+      <div id="resultsContent" style="display:none;">
+        <div class="resultsBar">
+          <div>
+            <div class="sectionTitle" style="margin:0;">📊 Worksheet Results</div>
+            <div id="resultsSourceBadge" style="font-size:15.6px; font-weight:700; margin-top:3px;"></div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="smallBtn" id="refreshResultsBtn" style="background:var(--teal-700);">🔄 Refresh</button>
+            <button class="smallBtn" id="clearResultsBtn">Clear All Results</button>
+          </div>
+        </div>
+        <div class="tableWrap">
+          <table id="resultsTable">
+            <thead><tr><th>#</th><th>Name</th><th>Class</th><th>Meeting</th><th>Score</th><th>Time</th></tr></thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+        <p id="noResultsMsg" style="margin-top:14px; color:#5a6b66; font-size:16.9px;"></p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONFIRM MODAL -->
+  <div id="confirmOverlay">
+    <div id="confirmBox">
+      <h3>Reset Virtual Lab?</h3>
+      <p>This will clear your simulation progress and current worksheet answers. This action cannot be undone.</p>
+      <div class="row">
+        <button id="confirmYes">Yes, Reset</button>
+        <button id="confirmNo">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ================= LAYOUT: HP (fluid) vs DESKTOP (stage 16:9 berskala) ================= */
+const MOBILE_MQ = window.matchMedia('(max-width: 900px), (max-height: 500px)');
+function isMobileLayout(){ return MOBILE_MQ.matches; }
+
+function getViewportSize(){
+  if(window.visualViewport){
+    return { w: window.visualViewport.width, h: window.visualViewport.height };
+  }
+  return { w: window.innerWidth, h: window.innerHeight };
+}
+function scaleStage(){
+  const stage = document.getElementById('stage');
+  if(!stage) return;
+  if(isMobileLayout()){
+    stage.style.transform = 'none';
+    return;
+  }
+  const { w: ww, h: wh } = getViewportSize();
+  const scale = Math.min(ww/1600, wh/900) * 0.98;
+  stage.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', scaleStage);
+window.addEventListener('orientationchange', ()=>setTimeout(scaleStage,200));
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', scaleStage);
+}
+scaleStage();
+window.addEventListener('load', ()=>setTimeout(scaleStage,120));
+
+/* ================= SPLASH SCREEN ================= */
+(function(){
+  const fill = document.getElementById('splashFill');
+  const pct = document.getElementById('splashPct');
+  const btn = document.getElementById('splashStartBtn');
+  let p = 0;
+  const timer = setInterval(()=>{
+    p += Math.random()*14 + 6;
+    if(p >= 100){
+      p = 100;
+      clearInterval(timer);
+      btn.classList.add('ready');
+      pct.textContent = 'Ready!';
+    }else{
+      pct.textContent = 'Loading... ' + Math.floor(p) + '%';
+    }
+    fill.style.width = p + '%';
+  }, 160);
+
+  btn.addEventListener('click', function(){
+    try{ getCtx(); }catch(e){}
+    try{ sndClick(); }catch(e){}
+    document.getElementById('splashScreen').style.display = 'none';
+    // Fullscreen otomatis hanya di desktop; di HP biarkan pengguna memilih lewat tombol ⛶
+    if(!isMobileLayout()){
+      const el = document.documentElement;
+      const reqFs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      if(reqFs){
+        try{ const r = reqFs.call(el); if(r && r.catch) r.catch(()=>{}); }catch(e){}
+      }
+    }
+    setTimeout(scaleStage, 150);
+  });
+})();
+
+/* ================= SOUND EFFECTS (Web Audio API) ================= */
+let soundOn = true;
+let actx = null;
+function getCtx(){
+  if(!actx){ actx = new (window.AudioContext||window.webkitAudioContext)(); }
+  if(actx.state === 'suspended'){ actx.resume().catch(()=>{}); }
+  return actx;
+}
+function beep(freq, dur, type='sine', vol=0.18){
+  if(!soundOn) return;
+  try{
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    gain.gain.value = vol;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.stop(ctx.currentTime + dur);
+  }catch(e){}
+}
+function sndClick(){ beep(520,0.08,'triangle',0.15); }
+function sndTab(){ beep(380,0.09,'sine',0.14); }
+function sndCorrect(){ beep(660,0.12,'sine',0.2); setTimeout(()=>beep(880,0.14,'sine',0.2),110); }
+function sndWrong(){ beep(180,0.22,'sawtooth',0.16); }
+function sndReset(){ beep(300,0.1,'square',0.15); setTimeout(()=>beep(220,0.16,'square',0.15),120); }
+
+document.getElementById('soundBtn').addEventListener('click', function(){
+  soundOn = !soundOn;
+  this.textContent = soundOn ? '🔊' : '🔇';
+  this.classList.toggle('active', !soundOn);
+  if(soundOn) sndClick();
+});
+
+/* ================= FULLSCREEN ================= */
+function fsSupported(){
+  const el = document.documentElement;
+  return !!(el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen);
+}
+document.getElementById('fsBtn').addEventListener('click', function(){
+  sndClick();
+  const el = document.documentElement;
+  const reqFs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  const exitFs = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  if(fsSupported()){
+    try{
+      const r = !isFs ? reqFs.call(el) : exitFs.call(document);
+      if(r && r.catch) r.catch(()=>{});
+    }catch(e){}
+  }else{
+    // iPhone Safari tidak mendukung Fullscreen API untuk halaman web biasa.
+    // Tip: gunakan "Bagikan > Tambahkan ke Layar Utama" agar tampil layar penuh.
+    window.scrollTo(0, 1);
+    setTimeout(scaleStage, 120);
+  }
+});
+
+/* ================= TAB NAVIGATION ================= */
+const navTabs = document.querySelectorAll('.navTab');
+navTabs.forEach(tab=>{
+  tab.addEventListener('click', function(){
+    const target = this.dataset.panel;
+    if(target === 'results' && !resultsUnlocked){
+      sndClick();
+    } else {
+      sndTab();
+    }
+    navTabs.forEach(t=>t.classList.remove('active'));
+    this.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    const panel = document.getElementById('panel-'+target);
+    panel.classList.add('active');
+    panel.scrollTop = 0;
+    // pastikan tab aktif terlihat di bar yang bisa digeser (HP)
+    try{ this.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'}); }catch(e){}
+  });
+});
+
+/* ================= MEETING TOGGLES ================= */
+document.querySelectorAll('.meetingBtn').forEach(btn=>{
+  btn.addEventListener('click', function(){
+    sndClick();
+    const group = this.dataset.group;
+    const meeting = this.dataset.meeting;
+    document.querySelectorAll(`.meetingBtn[data-group="${group}"]`).forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    document.querySelectorAll(`#${group}-m1, #${group}-m2`)
+      .forEach(el=>el.classList.remove('active'));
+    document.getElementById(`${group}-m${meeting}`).classList.add('active');
+  });
+});
+
+/* ================= SIMULATION DATA ================= */
+const sim1Data = [
+  {text:"I strongly believe that marine plastic pollution must be stopped immediately.", cat:"thesis"},
+  {text:"It is critical that we protect our forests from illegal logging.", cat:"thesis"},
+  {text:"Every year, millions of tons of plastic waste enter the ocean and kill marine animals.", cat:"argument"},
+  {text:"Deforestation destroys the natural habitat of countless species and speeds up climate change.", cat:"argument"},
+  {text:"Therefore, everyone must take action now to reduce plastic waste before it is too late.", cat:"reiteration"},
+  {text:"In conclusion, protecting our forests is not optional — it is our shared responsibility.", cat:"reiteration"}
+];
+const sim2Data = [
+  {text:"I strongly believe that social media addiction must be addressed by schools and parents.", cat:"thesis"},
+  {text:"It is critical that we manage e-waste responsibly.", cat:"thesis"},
+  {text:"Studies show that excessive social media use is linked to higher anxiety levels among teenagers.", cat:"evidence"},
+  {text:"Millions of tons of e-waste are dumped every year.", cat:"evidence"},
+  {text:"This happens because constant comparison with others online lowers self-esteem.", cat:"reasoning"},
+  {text:"This shows that current disposal methods are unsustainable.", cat:"reasoning"}
+];
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function buildSim(containerId, data, scoreElId, totalElId, feedbackElId){
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  let score = 0;
+  let selectedIdx = null;
+  const shuffled = shuffle(data.map((d,i)=>({...d, origIdx:i})));
+  document.getElementById(totalElId).textContent = data.length;
+  document.getElementById(scoreElId).textContent = 0;
+
+  // bersihkan hasil lama di kotak kategori saat reset/rebuild
+  const panel = container.closest('.meetingContent');
+  panel.querySelectorAll('.dropList').forEach(l=>{ l.innerHTML=''; });
+  document.getElementById(feedbackElId).textContent = '';
+
+  shuffled.forEach((item, idx)=>{
+    const chip = document.createElement('div');
+    chip.className = 'sentChip';
+    chip.textContent = item.text;
+    chip.dataset.cat = item.cat;
+    chip.dataset.idx = idx;
+    chip.addEventListener('click', function(){
+      if(this.classList.contains('placed')) return;
+      sndClick();
+      document.querySelectorAll(`#${containerId} .sentChip`).forEach(c=>c.style.outline='');
+      selectedIdx = idx;
+      this.style.outline = '3px solid var(--gold-500)';
+    });
+    container.appendChild(chip);
+  });
+
+  panel.querySelectorAll('.catDrop').forEach(drop=>{
+    drop.onclick = function(){
+      if(selectedIdx === null) return;
+      const chip = container.querySelector(`.sentChip[data-idx="${selectedIdx}"]`);
+      if(!chip || chip.classList.contains('placed')) return;
+      const chosenCat = this.dataset.cat;
+      const correctCat = chip.dataset.cat;
+      const list = this.querySelector('.dropList');
+      const placed = document.createElement('div');
+      placed.className = 'placedItem' + (chosenCat === correctCat ? '' : ' wrong');
+      placed.textContent = chip.textContent;
+      list.appendChild(placed);
+      chip.classList.add('placed');
+      const fb = document.getElementById(feedbackElId);
+      if(chosenCat === correctCat){
+        score++;
+        sndCorrect();
+        fb.style.color = 'var(--green-600)';
+        fb.textContent = '✓ Correct!';
+      }else{
+        sndWrong();
+        fb.style.color = 'var(--coral-500)';
+        fb.textContent = `✗ Not quite — correct category: ${correctCat.toUpperCase()}`;
+      }
+      document.getElementById(scoreElId).textContent = score;
+      selectedIdx = null;
+    };
+  });
+}
+
+function initSims(){
+  buildSim('sim1-sentences', sim1Data, 'sim1-score', 'sim1-total', 'sim1-feedback');
+  buildSim('sim2-sentences', sim2Data, 'sim2-score', 'sim2-total', 'sim2-feedback');
+}
+initSims();
+
+/* ================= WORKSHEET / QUIZ ================= */
+const quizM1 = [
+  {q:"1. What is the main communicative purpose of an analytical exposition text?", opts:[
+    "A. To entertain readers with an imaginative story",
+    "B. To persuade readers/listeners that an issue is important",
+    "C. To describe the physical appearance of a place",
+    "D. To give step-by-step instructions on how to do something",
+    "E. To retell a series of past events in chronological order"], answer:1},
+  {q:"2. Which part of an analytical exposition text states the writer's position or main idea?", opts:[
+    "A. Reiteration","B. Recommendation","C. Thesis","D. Orientation","E. Resolution"], answer:2},
+  {q:'3. "I strongly believe that marine plastic pollution must be stopped immediately." This sentence is an example of a...', opts:[
+    "A. Reiteration","B. Thesis statement","C. Piece of evidence","D. Complication","E. Coda"], answer:1},
+  {q:"4. In the generic structure of analytical exposition, the part that restates the writer's position after all arguments have been presented is called...", opts:[
+    "A. Thesis","B. Argument","C. Reiteration/Conclusion","D. Orientation","E. Series of events"], answer:2},
+  {q:"5. Which expression is LEAST likely to introduce a thesis statement in an analytical exposition text?", opts:[
+    "A. In my opinion, deforestation is a serious threat.",
+    "B. It is critical that we manage e-waste responsibly.",
+    "C. Once upon a time, there was a forest full of animals.",
+    "D. Therefore, we must reduce single-use plastic.",
+    "E. I strongly believe that social media addiction harms teenagers."], answer:2},
+  {q:"6. What is the purpose of the Reiteration stage in an analytical exposition text?", opts:[
+    "A. To introduce the topic for the first time",
+    "B. To restate the writer's position after the arguments have been given",
+    "C. To give background information only",
+    "D. To ask a rhetorical question",
+    "E. To describe a character"], answer:1},
+  {q:"7. Which of the following is an example of a key expression used to introduce a thesis statement?", opts:[
+    "A. Once upon a time...",
+    "B. It is critical that we act now.",
+    "C. First, second, third...",
+    "D. In conclusion, to summarize...",
+    "E. Once, this issue..."], answer:1},
+  {q:'8. "Every year, millions of tons of plastic waste enter the ocean and kill marine animals." This sentence functions as...', opts:[
+    "A. A thesis statement",
+    "B. An argument supporting the thesis",
+    "C. A reiteration",
+    "D. An orientation",
+    "E. A complication"], answer:1},
+  {q:"9. In this lab, Deforestation is discussed as an example of...", opts:[
+    "A. A narrative conflict",
+    "B. A social and environmental issue in an analytical exposition text",
+    "C. A descriptive text topic",
+    "D. A procedure text",
+    "E. A recount text"], answer:1},
+  {q:"10. Why does an analytical exposition text use persuasive language?", opts:[
+    "A. To entertain the audience with jokes",
+    "B. To convince the reader/listener that an issue is important",
+    "C. To give step-by-step instructions",
+    "D. To retell historical events",
+    "E. To describe a place in detail"], answer:1}
+];
+const quizM2 = [
+  {q:"1. In an analytical exposition text, the part that provides evidence and reasoning to support the thesis is called...", opts:[
+    "A. Orientation","B. Argument","C. Reiteration","D. Complication","E. Resolution"], answer:1},
+  {q:'2. "Excessive screen time has been linked to anxiety and poor sleep among teenagers." This sentence functions as...', opts:[
+    "A. A thesis statement",
+    "B. A piece of evidence supporting an argument",
+    "C. A reiteration",
+    "D. An orientation",
+    "E. A recommendation only, with no evidence"], answer:1},
+  {q:"3. Which statement best distinguishes 'evidence' from 'reasoning' within an argument?", opts:[
+    "A. Evidence is the writer's opinion; reasoning is a fact.",
+    "B. Evidence is factual data or examples; reasoning explains how that evidence supports the thesis.",
+    "C. Evidence and reasoning always mean exactly the same thing.",
+    "D. Evidence only appears in the thesis; reasoning only appears in the reiteration.",
+    "E. Evidence is used to entertain; reasoning is used to describe."], answer:1},
+  {q:'4. "Therefore, governments and manufacturers must take responsibility for managing e-waste properly." This sentence most likely belongs to the...', opts:[
+    "A. Thesis","B. Argument (evidence)","C. Reiteration/Conclusion","D. Orientation","E. Complication"], answer:2},
+  {q:"5. When evaluating the effectiveness of an argument in an analytical exposition text, a critical listener should mainly consider...", opts:[
+    "A. How long the speaker talks",
+    "B. Whether the evidence logically supports the thesis",
+    "C. The number of pictures used in the video",
+    "D. The speaker's tone of voice only",
+    "E. The title of the video only"], answer:1},
+  {q:"6. In an argument, what is the main role of 'reasoning'?", opts:[
+    "A. To provide factual data only",
+    "B. To explain how the evidence supports the thesis",
+    "C. To restate the thesis",
+    "D. To introduce a completely new topic",
+    "E. To describe the writer's feelings"], answer:1},
+  {q:'7. "Millions of tons of e-waste are dumped every year." This sentence is best classified as...', opts:[
+    "A. A thesis statement",
+    "B. Evidence",
+    "C. Reiteration",
+    "D. Orientation",
+    "E. A rhetorical question"], answer:1},
+  {q:"8. Which issue is discussed together with Social Media Addiction in Meeting 2?", opts:[
+    "A. Marine Plastic Pollution",
+    "B. Deforestation",
+    "C. E-waste Management",
+    "D. Global Warming",
+    "E. Water Scarcity"], answer:2},
+  {q:"9. A critical listener evaluating an argument should mainly focus on whether...", opts:[
+    "A. The speaker uses many statistics",
+    "B. The evidence logically supports the thesis",
+    "C. The video is long enough",
+    "D. The speaker looks confident",
+    "E. The topic is popular"], answer:1},
+  {q:"10. When constructing your own thesis statement about e-waste, which is the most effective structure?", opts:[
+    "A. A key expression followed by a clear position on the issue",
+    "B. A joke about electronics",
+    "C. A list of unrelated facts",
+    "D. A question with no answer",
+    "E. A summary of someone else's opinion only"], answer:0}
+];
+
+let currentQuiz = [];
+let currentMeeting = 1;
+let currentQ = 0;
+let userAnswers = [];
+let currentStudentName = '';
+let currentStudentClass = '';
+
+function startQuiz(meeting){
+  const nameInput = document.getElementById(meeting === 1 ? 'ws1Name' : 'ws2Name');
+  const classInput = document.getElementById(meeting === 1 ? 'ws1Class' : 'ws2Class');
+  const name = nameInput.value.trim();
+  const klass = classInput.value.trim();
+  const msg = document.getElementById('wsIdentityMsg');
+  if(!name || !klass){
+    sndWrong();
+    msg.textContent = 'Please fill in your Name and Class before starting the quiz.';
+    return;
+  }
+  msg.textContent = '';
+  currentStudentName = name;
+  currentStudentClass = klass;
+  currentMeeting = meeting;
+  currentQuiz = meeting === 1 ? quizM1 : quizM2;
+  currentQ = 0;
+  userAnswers = new Array(currentQuiz.length).fill(null);
+  document.getElementById('wsIntro').style.display = 'none';
+  document.getElementById('quizDone').style.display = 'none';
+  document.getElementById('quizWrap').style.display = 'block';
+  document.getElementById('panel-worksheet').scrollTop = 0;
+  renderQ();
+}
+
+function renderQ(){
+  const item = currentQuiz[currentQ];
+  document.getElementById('qText').textContent = item.q;
+  document.getElementById('quizProgress').textContent = `${currentStudentName} (${currentStudentClass}) — Question ${currentQ+1} of ${currentQuiz.length}`;
+  document.getElementById('quizProgressFill').style.width = `${((currentQ)/currentQuiz.length)*100}%`;
+  const optWrap = document.getElementById('qOptions');
+  optWrap.innerHTML = '';
+  item.opts.forEach((opt, i)=>{
+    const b = document.createElement('button');
+    b.className = 'qOption' + (userAnswers[currentQ]===i ? ' selected' : '');
+    b.textContent = opt;
+    b.addEventListener('click', function(){
+      sndClick();
+      userAnswers[currentQ] = i;
+      optWrap.querySelectorAll('.qOption').forEach(o=>o.classList.remove('selected'));
+      this.classList.add('selected');
+    });
+    optWrap.appendChild(b);
+  });
+  document.getElementById('qBackBtn').disabled = currentQ === 0;
+  document.getElementById('qNextBtn').textContent = currentQ === currentQuiz.length-1 ? 'Submit Worksheet' : 'Next';
+  document.getElementById('panel-worksheet').scrollTop = 0;
+}
+
+document.getElementById('qBackBtn').addEventListener('click', ()=>{
+  sndClick();
+  if(currentQ>0){ currentQ--; renderQ(); }
+});
+document.getElementById('qNextBtn').addEventListener('click', ()=>{
+  if(userAnswers[currentQ] === null){ sndWrong(); return; }
+  if(currentQ < currentQuiz.length-1){
+    sndClick();
+    currentQ++;
+    renderQ();
+  }else{
+    finishQuiz();
+  }
+});
+
+function finishQuiz(){
+  let score = 0;
+  currentQuiz.forEach((item,i)=>{ if(userAnswers[i]===item.answer) score++; });
+  sndCorrect();
+  document.getElementById('quizWrap').style.display = 'none';
+  document.getElementById('quizDone').style.display = 'block';
+  document.getElementById('quizScoreText').textContent = `${score}/${currentQuiz.length}`;
+  const pct = (score/currentQuiz.length)*360;
+  document.getElementById('quizScoreCircle').style.background = `conic-gradient(var(--green-600) ${pct}deg, #dfe7e4 ${pct}deg)`;
+  const doneMsgEl = document.getElementById('quizDoneMsg');
+  doneMsgEl.textContent = `Great job, ${currentStudentName}! Saving your answers...`;
+  saveResult(currentMeeting, currentStudentName, currentStudentClass, score, currentQuiz.length)
+    .then(status=>{
+      if(status.online && status.success){
+        doneMsgEl.textContent = `Great job, ${currentStudentName}! Your answers have been saved online — your teacher can view them from any device.`;
+      }else if(status.online && !status.success){
+        doneMsgEl.textContent = `Great job, ${currentStudentName}! Your score was saved on this device, but sending it online failed (check internet connection).`;
+      }else{
+        doneMsgEl.textContent = `Great job, ${currentStudentName}! Your answers were saved on this device only (online sync is not configured yet).`;
+      }
+    });
+}
+
+/* ================= ONLINE BACKEND (Google Apps Script + Google Sheets) ================= */
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOcOcPr7fzS6O5aUm1o-Idq-NJ9B1qlQYeJj3yMxJ6141ZezHDcUNwUYuoXGBFYICgnw/exec';
+
+function isScriptConfigured(){
+  return typeof SCRIPT_URL === 'string'
+    && SCRIPT_URL.indexOf('GANTI_DENGAN_DEPLOYMENT_ID_ANDA') === -1
+    && SCRIPT_URL.indexOf('script.google.com') !== -1;
+}
+
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, ch=>(
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]
+  ));
+}
+
+function saveResultLocal_(payload){
+  try{
+    const results = JSON.parse(localStorage.getItem('ae_results') || '[]');
+    results.push(payload);
+    localStorage.setItem('ae_results', JSON.stringify(results));
+  }catch(e){ /* ignore quota errors */ }
+}
+
+async function saveResult(meeting, name, klass, score, total){
+  const payload = { name, klass, meeting, score, total, time: new Date().toLocaleString('id-ID') };
+  saveResultLocal_(payload);
+
+  if(!isScriptConfigured()){
+    return { online:false, success:false };
+  }
+  try{
+    await fetch(SCRIPT_URL, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action:'submit' }, payload))
+    });
+    return { online:true, success:true };
+  }catch(err){
+    console.error('Gagal mengirim hasil ke server online:', err);
+    return { online:true, success:false };
+  }
+}
+
+document.getElementById('startWs1').addEventListener('click', ()=>{ sndClick(); startQuiz(1); });
+document.getElementById('startWs2').addEventListener('click', ()=>{ sndClick(); startQuiz(2); });
+document.getElementById('backToWsIntro').addEventListener('click', ()=>{
+  sndClick();
+  document.getElementById('quizDone').style.display = 'none';
+  document.getElementById('wsIntro').style.display = 'block';
+});
+
+/* ================= SIMULATION ANSWER KEY (locked) ================= */
+document.getElementById('simkeyUnlockBtn').addEventListener('click', unlockSimKey);
+document.getElementById('simkeyPass').addEventListener('keydown', e=>{ if(e.key==='Enter') unlockSimKey(); });
+
+function unlockSimKey(){
+  const val = document.getElementById('simkeyPass').value;
+  if(val === 'Virtual1'){
+    sndCorrect();
+    document.getElementById('simkeyGate').style.display = 'none';
+    document.getElementById('simkeyContent').style.display = 'block';
+    renderSimKey();
+  }else{
+    sndWrong();
+    document.getElementById('simkeyGateMsg').textContent = 'Incorrect password. Please try again.';
+  }
+}
+
+function renderSimKey(){
+  const list1 = document.getElementById('simkey1-list');
+  const list2 = document.getElementById('simkey2-list');
+  list1.innerHTML = '';
+  list2.innerHTML = '';
+  [[sim1Data, list1],[sim2Data, list2]].forEach(([data, list])=>{
+    data.forEach(item=>{
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.style.borderLeftColor = 'var(--blue-600)';
+      div.innerHTML = `<p>"${escapeHtml(item.text)}"</p><p style="margin-top:6px;"><b>Correct category: <span style="color:var(--green-600); text-transform:uppercase;">${escapeHtml(item.cat)}</span></b></p>`;
+      list.appendChild(div);
+    });
+  });
+}
+
+/* ================= WORKSHEET ANSWER KEY (locked) ================= */
+document.getElementById('wskeyUnlockBtn').addEventListener('click', unlockWsKey);
+document.getElementById('wskeyPass').addEventListener('keydown', e=>{ if(e.key==='Enter') unlockWsKey(); });
+
+function unlockWsKey(){
+  const val = document.getElementById('wskeyPass').value;
+  if(val === 'Virtual1'){
+    sndCorrect();
+    document.getElementById('wskeyGate').style.display = 'none';
+    document.getElementById('wskeyContent').style.display = 'block';
+    renderWsKey();
+  }else{
+    sndWrong();
+    document.getElementById('wskeyGateMsg').textContent = 'Incorrect password. Please try again.';
+  }
+}
+
+function renderWsKey(){
+  renderWsKeyMeeting('wskey-m1', quizM1);
+  renderWsKeyMeeting('wskey-m2', quizM2);
+}
+
+function renderWsKeyMeeting(containerId, quizData){
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  quizData.forEach(item=>{
+    const card = document.createElement('div');
+    card.className = 'qCard';
+    card.style.marginBottom = '16px';
+    let optsHtml = '';
+    item.opts.forEach((opt, i)=>{
+      const isCorrect = i === item.answer;
+      optsHtml += `<div class="qOption" style="cursor:default; ${isCorrect ? 'border-color:var(--green-600); background:var(--green-600); color:#fff; font-weight:700;' : ''}">${isCorrect ? '✓ ' : ''}${escapeHtml(opt)}</div>`;
+    });
+    card.innerHTML = `<h3>${escapeHtml(item.q)}</h3>${optsHtml}`;
+    container.appendChild(card);
+  });
+}
+
+/* ================= MEETING 2 PASSWORD GATES ================= */
+const MEETING2_PASSWORDS = { theory: '5827', sim: '3164', ws: '9042' };
+
+function setupMeeting2Gate(key, gateId, contentId, passId, btnId, msgId){
+  const btn = document.getElementById(btnId);
+  const input = document.getElementById(passId);
+  function tryUnlock(){
+    const val = input.value.trim();
+    if(val === MEETING2_PASSWORDS[key]){
+      sndCorrect();
+      document.getElementById(gateId).style.display = 'none';
+      document.getElementById(contentId).style.display = 'block';
+    }else{
+      sndWrong();
+      document.getElementById(msgId).textContent = 'Incorrect password. Please try again.';
+    }
+  }
+  btn.addEventListener('click', tryUnlock);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+}
+
+setupMeeting2Gate('theory', 'theoryM2Gate', 'theoryM2Content', 'theoryM2Pass', 'theoryM2UnlockBtn', 'theoryM2GateMsg');
+setupMeeting2Gate('sim', 'simM2Gate', 'simM2Content', 'simM2Pass', 'simM2UnlockBtn', 'simM2GateMsg');
+setupMeeting2Gate('ws', 'wsM2Gate', 'wsM2Content', 'wsM2Pass', 'wsM2UnlockBtn', 'wsM2GateMsg');
+
+/* ================= RESULTS (locked, online via Google Apps Script) ================= */
+let resultsUnlocked = false;
+let resultsPasswordEntered = '';
+const RESULTS_PASSWORD = 'Virtual1';
+
+document.getElementById('resultsUnlockBtn').addEventListener('click', unlockResults);
+document.getElementById('resultsPass').addEventListener('keydown', e=>{ if(e.key==='Enter') unlockResults(); });
+
+function unlockResults(){
+  const val = document.getElementById('resultsPass').value;
+  if(val === RESULTS_PASSWORD){
+    sndCorrect();
+    resultsUnlocked = true;
+    resultsPasswordEntered = val;
+    document.getElementById('resultsGate').style.display = 'none';
+    document.getElementById('resultsContent').style.display = 'block';
+    renderResults();
+  }else{
+    sndWrong();
+    document.getElementById('resultsGateMsg').textContent = 'Incorrect password. Please try again.';
+  }
+}
+
+async function renderResults(){
+  const body = document.getElementById('resultsBody');
+  const noMsg = document.getElementById('noResultsMsg');
+  const statusBadge = document.getElementById('resultsSourceBadge');
+  body.innerHTML = '';
+
+  let results = [];
+  let source = 'local';
+
+  if(isScriptConfigured()){
+    noMsg.textContent = 'Loading data from the online server...';
+    try{
+      const res = await fetch(SCRIPT_URL + '?action=list', { method:'GET', cache:'no-store' });
+      const data = await res.json();
+      if(Array.isArray(data)){
+        results = data;
+        source = 'online';
+      }else{
+        throw new Error('Unexpected response');
+      }
+    }catch(err){
+      console.error('Gagal memuat hasil dari server:', err);
+      results = JSON.parse(localStorage.getItem('ae_results') || '[]');
+      source = 'error';
+    }
+  }else{
+    results = JSON.parse(localStorage.getItem('ae_results') || '[]');
+    source = 'local';
+  }
+
+  results = results.slice().reverse();
+
+  if(statusBadge){
+    if(source === 'online'){
+      statusBadge.textContent = '🟢 Online — data tersinkron dari semua perangkat';
+      statusBadge.style.color = 'var(--green-600)';
+    }else if(source === 'error'){
+      statusBadge.textContent = '🟠 Gagal terhubung ke server — menampilkan cadangan lokal perangkat ini';
+      statusBadge.style.color = 'var(--coral-500)';
+    }else{
+      statusBadge.textContent = '⚪ Mode lokal — SCRIPT_URL belum dikonfigurasi (lihat panduan deployment)';
+      statusBadge.style.color = '#8a8a8a';
+    }
+  }
+
+  if(results.length === 0){
+    noMsg.textContent = 'No worksheet submissions yet.';
+    return;
+  }
+  noMsg.textContent = '';
+  results.forEach((r,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.klass||'')}</td><td>Meeting ${escapeHtml(r.meeting)}</td><td>${escapeHtml(r.score)}/${escapeHtml(r.total)}</td><td>${escapeHtml(r.time||'')}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+document.getElementById('refreshResultsBtn').addEventListener('click', ()=>{
+  sndClick();
+  renderResults();
+});
+
+document.getElementById('clearResultsBtn').addEventListener('click', async ()=>{
+  if(!confirm('Clear all saved worksheet results? This cannot be undone.')) return;
+
+  if(isScriptConfigured()){
+    try{
+      await fetch(SCRIPT_URL, {
+        method:'POST',
+        headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action:'clear', password: resultsPasswordEntered || RESULTS_PASSWORD })
+      });
+    }catch(err){
+      alert('Gagal menghapus data di server online. Periksa koneksi internet lalu coba lagi.');
+    }
+  }
+  localStorage.removeItem('ae_results');
+  sndReset();
+  renderResults();
+});
+
+/* ================= RESET ================= */
+const resetBtn = document.getElementById('resetBtn');
+const confirmOverlay = document.getElementById('confirmOverlay');
+resetBtn.addEventListener('click', ()=>{
+  sndClick();
+  confirmOverlay.style.display = 'flex';
+});
+document.getElementById('confirmNo').addEventListener('click', ()=>{
+  sndClick();
+  confirmOverlay.style.display = 'none';
+});
+document.getElementById('confirmYes').addEventListener('click', ()=>{
+  sndReset();
+  confirmOverlay.style.display = 'none';
+  initSims();
+  document.getElementById('quizWrap').style.display = 'none';
+  document.getElementById('quizDone').style.display = 'none';
+  document.getElementById('wsIntro').style.display = 'block';
+  document.getElementById('ws1Name').value = '';
+  document.getElementById('ws1Class').value = '';
+  document.getElementById('ws2Name').value = '';
+  document.getElementById('ws2Class').value = '';
+  document.getElementById('wsIdentityMsg').textContent = '';
+  navTabs.forEach(t=>t.classList.remove('active'));
+  document.querySelector('.navTab[data-panel="procedure"]').classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-procedure').classList.add('active');
+});
+
+</script>
+</body>
+</html>
